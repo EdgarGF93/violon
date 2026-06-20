@@ -1,0 +1,443 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Violon à l'oreille</title>
+<style>
+  :root {
+    --bg: #1a1410;
+    --panel: #241c15;
+    --panel-2: #2e2419;
+    --line: #3d3022;
+    --amber: #e8a33d;
+    --amber-dim: #b9812f;
+    --cream: #f3e9d8;
+    --muted: #9a8a72;
+    --green: #6bbf73;
+    --red: #d9694e;
+    --radius: 14px;
+    --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: var(--font);
+    background: radial-gradient(120% 90% at 50% 0%, #2a2016 0%, var(--bg) 60%);
+    color: var(--cream);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 24px 16px 48px;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap { width: 100%; max-width: 560px; }
+  header { text-align: center; margin-bottom: 22px; }
+  h1 {
+    font-size: 1.7rem;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    color: var(--cream);
+  }
+  h1 .accent { color: var(--amber); }
+  .subtitle { color: var(--muted); font-size: 0.9rem; margin-top: 4px; }
+
+  .card {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 18px;
+    margin-bottom: 16px;
+  }
+
+  .settings { display: flex; flex-direction: column; gap: 14px; }
+  .setting-row { display: flex; flex-direction: column; gap: 7px; }
+  .label { font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); }
+  .seg {
+    display: flex;
+    background: var(--bg);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 4px;
+    gap: 4px;
+  }
+  .seg button {
+    flex: 1;
+    border: none;
+    background: transparent;
+    color: var(--muted);
+    padding: 9px 6px;
+    border-radius: 7px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    font-family: var(--font);
+    transition: background .15s, color .15s;
+  }
+  .seg button.active { background: var(--amber); color: #2a2016; }
+
+  .stage { text-align: center; }
+  .scoreline {
+    display: flex; justify-content: space-around;
+    margin-bottom: 18px; gap: 10px;
+  }
+  .stat { flex: 1; }
+  .stat .num { font-size: 1.5rem; font-weight: 700; color: var(--amber); }
+  .stat .cap { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); }
+
+  .play-btn {
+    width: 96px; height: 96px; border-radius: 50%;
+    border: none; cursor: pointer;
+    background: linear-gradient(160deg, var(--amber), var(--amber-dim));
+    color: #2a2016; font-size: 2.2rem;
+    display: inline-flex; align-items: center; justify-content: center;
+    box-shadow: 0 8px 24px rgba(232,163,61,.25);
+    transition: transform .1s;
+    margin-bottom: 6px;
+  }
+  .play-btn:active { transform: scale(0.94); }
+  .play-btn.playing { animation: pulse 1s ease-in-out infinite; }
+  @keyframes pulse { 0%,100% { box-shadow: 0 8px 24px rgba(232,163,61,.25);} 50% { box-shadow: 0 8px 36px rgba(232,163,61,.6);} }
+  .replay {
+    display: block; margin: 0 auto 16px; background: none; border: none;
+    color: var(--muted); cursor: pointer; font-size: 0.85rem; font-family: var(--font);
+    text-decoration: underline; text-underline-offset: 3px;
+  }
+  .replay:hover { color: var(--cream); }
+
+  .prompt { font-size: 0.95rem; color: var(--muted); min-height: 1.4em; margin-bottom: 14px; }
+
+  .choices {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+  }
+  .choices.intervals { grid-template-columns: repeat(3, 1fr); }
+  .choice {
+    border: 1px solid var(--line);
+    background: var(--panel-2);
+    color: var(--cream);
+    padding: 13px 4px;
+    border-radius: 10px;
+    font-size: 0.95rem;
+    font-weight: 600;
+    cursor: pointer;
+    font-family: var(--font);
+    transition: background .12s, border-color .12s, transform .08s;
+  }
+  .choice:hover:not(:disabled) { border-color: var(--amber-dim); background: #362a1d; }
+  .choice:active:not(:disabled) { transform: scale(0.96); }
+  .choice:disabled { cursor: default; }
+  .choice.correct { background: var(--green); border-color: var(--green); color: #11240f; }
+  .choice.wrong { background: var(--red); border-color: var(--red); color: #2a0d07; }
+  .choice.reveal { border-color: var(--green); color: var(--green); }
+
+  .feedback { min-height: 2.4em; margin-top: 16px; font-size: 1rem; font-weight: 600; }
+  .feedback.good { color: var(--green); }
+  .feedback.bad { color: var(--red); }
+  .next-btn {
+    margin-top: 14px; border: none; cursor: pointer;
+    background: var(--amber); color: #2a2016; font-weight: 700;
+    padding: 12px 28px; border-radius: 10px; font-size: 0.95rem; font-family: var(--font);
+  }
+  .hidden { display: none !important; }
+  footer { color: var(--muted); font-size: 0.75rem; text-align: center; margin-top: 8px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>🎻 Violon <span class="accent">à l'oreille</span></h1>
+    <div class="subtitle">Écoute, reconnais, progresse</div>
+  </header>
+
+  <div class="card">
+    <div class="settings">
+      <div class="setting-row">
+        <span class="label">Mode</span>
+        <div class="seg" id="modeSeg">
+          <button data-mode="absolute" class="active">Nommer la note</button>
+          <button data-mode="interval">Reconnaître l'intervalle</button>
+        </div>
+      </div>
+      <div class="setting-row">
+        <span class="label">Étendue des notes</span>
+        <div class="seg" id="rangeSeg">
+          <button data-range="open">Cordes à vide</button>
+          <button data-range="first" class="active">1re position</button>
+          <button data-range="full">Complète</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card stage">
+    <div class="scoreline">
+      <div class="stat"><div class="num" id="statScore">0</div><div class="cap">Réussies</div></div>
+      <div class="stat"><div class="num" id="statTotal">0</div><div class="cap">Total</div></div>
+      <div class="stat"><div class="num" id="statStreak">0</div><div class="cap">Série</div></div>
+    </div>
+
+    <button class="play-btn" id="playBtn" aria-label="Jouer">▶</button>
+    <button class="replay hidden" id="replayBtn">↻ Réécouter</button>
+
+    <div class="prompt" id="prompt">Clique sur ▶ pour entendre une note</div>
+
+    <div class="choices" id="choices"></div>
+
+    <div class="feedback" id="feedback"></div>
+    <button class="next-btn hidden" id="nextBtn">Note suivante →</button>
+  </div>
+
+  <footer>Son synthétisé · fonctionne hors-ligne · 🎧 casque recommandé</footer>
+</div>
+
+<script>
+"use strict";
+
+// ---------- Théorie musicale ----------
+const NOTE_NAMES = ["Do","Do♯","Ré","Ré♯","Mi","Fa","Fa♯","Sol","Sol♯","La","La♯","Si"];
+const INTERVALS = [
+  {semi:0,  name:"Unisson"},
+  {semi:1,  name:"2de min"},
+  {semi:2,  name:"2de Maj"},
+  {semi:3,  name:"3ce min"},
+  {semi:4,  name:"3ce Maj"},
+  {semi:5,  name:"4te juste"},
+  {semi:6,  name:"Triton"},
+  {semi:7,  name:"5te juste"},
+  {semi:8,  name:"6te min"},
+  {semi:9,  name:"6te Maj"},
+  {semi:10, name:"7e min"},
+  {semi:11, name:"7e Maj"},
+  {semi:12, name:"Octave"},
+];
+
+// Plages en MIDI (C-1 = 0, A4 = 69)
+const RANGES = {
+  open:  [55, 62, 69, 76],                 // Sol3, Ré4, La4, Mi5 (cordes à vide)
+  first: range(55, 83),                    // Sol3 → Si5 (1re position)
+  full:  range(55, 105),                   // Sol3 → La7 (tessiture violon)
+};
+function range(a, b){ const r=[]; for(let i=a;i<=b;i++) r.push(i); return r; }
+function midiToFreq(m){ return 440 * Math.pow(2, (m - 69) / 12); }
+function pitchClass(m){ return ((m % 12) + 12) % 12; }
+function noteName(m){ return NOTE_NAMES[pitchClass(m)]; }
+
+// ---------- Synthèse du violon (Web Audio) ----------
+let actx = null;
+function audio(){ if(!actx) actx = new (window.AudioContext||window.webkitAudioContext)(); return actx; }
+
+function playNote(freq, duration = 1.4){
+  const ctx = audio();
+  const t0 = ctx.currentTime;
+  const master = ctx.createGain();
+  master.connect(ctx.destination);
+
+  // Enveloppe d'archet : attaque douce, soutien, relâche
+  const peak = 0.22;
+  master.gain.setValueAtTime(0.0001, t0);
+  master.gain.exponentialRampToValueAtTime(peak, t0 + 0.09);
+  master.gain.setValueAtTime(peak, t0 + duration - 0.25);
+  master.gain.exponentialRampToValueAtTime(0.0001, t0 + duration);
+
+  // Filtre passe-bas pour adoucir le timbre (sawtooth = riche en harmoniques)
+  const filter = ctx.createBiquadFilter();
+  filter.type = "lowpass";
+  filter.frequency.setValueAtTime(Math.min(freq * 6, 8000), t0);
+  filter.Q.value = 0.7;
+  filter.connect(master);
+
+  // Léger formant pour la couleur "violon"
+  const formant = ctx.createBiquadFilter();
+  formant.type = "peaking";
+  formant.frequency.value = 1400;
+  formant.gain.value = 6;
+  formant.Q.value = 1.2;
+  formant.connect(filter);
+
+  // Vibrato (LFO sur la fréquence)
+  const lfo = ctx.createOscillator();
+  const lfoGain = ctx.createGain();
+  lfo.frequency.value = 5.4;
+  lfoGain.gain.setValueAtTime(0, t0);
+  lfoGain.gain.linearRampToValueAtTime(freq * 0.012, t0 + 0.4); // vibrato qui s'installe
+  lfo.connect(lfoGain);
+  lfo.start(t0); lfo.stop(t0 + duration);
+
+  // Deux oscillateurs légèrement désaccordés pour l'épaisseur
+  [{type:"sawtooth", detune:0, g:0.6}, {type:"sawtooth", detune:-4, g:0.4}].forEach(o => {
+    const osc = ctx.createOscillator();
+    osc.type = o.type;
+    osc.frequency.value = freq;
+    osc.detune.value = o.detune;
+    const g = ctx.createGain();
+    g.gain.value = o.g;
+    lfoGain.connect(osc.frequency);
+    osc.connect(g); g.connect(formant);
+    osc.start(t0); osc.stop(t0 + duration);
+  });
+}
+
+async function playSequence(freqs, gap = 0.9){
+  await audio().resume();
+  freqs.forEach((f, i) => setTimeout(() => playNote(f), i * gap * 1000));
+}
+
+// ---------- État du jeu ----------
+const state = {
+  mode: "absolute",
+  range: "first",
+  current: null,   // {notes:[midi...], answerIndex, choices:[...]}
+  score: 0, total: 0, streak: 0,
+  answered: false,
+};
+
+const el = {
+  modeSeg: document.getElementById("modeSeg"),
+  rangeSeg: document.getElementById("rangeSeg"),
+  playBtn: document.getElementById("playBtn"),
+  replayBtn: document.getElementById("replayBtn"),
+  prompt: document.getElementById("prompt"),
+  choices: document.getElementById("choices"),
+  feedback: document.getElementById("feedback"),
+  nextBtn: document.getElementById("nextBtn"),
+  statScore: document.getElementById("statScore"),
+  statTotal: document.getElementById("statTotal"),
+  statStreak: document.getElementById("statStreak"),
+};
+
+function pick(arr){ return arr[Math.floor(Math.random() * arr.length)]; }
+
+function newRound(){
+  state.answered = false;
+  el.feedback.textContent = "";
+  el.feedback.className = "feedback";
+  el.nextBtn.classList.add("hidden");
+  el.replayBtn.classList.remove("hidden");
+
+  const pool = RANGES[state.range];
+
+  if(state.mode === "absolute"){
+    const note = pick(pool);
+    state.current = { notes: [note], answer: pitchClass(note) };
+    el.prompt.textContent = "Quelle est cette note ?";
+    buildNoteChoices();
+    playSequence(state.current.notes.map(midiToFreq));
+  } else {
+    // intervalle : note de référence puis note cible
+    const ref = pick(pool);
+    const interval = pick(INTERVALS);
+    const dir = Math.random() < 0.5 ? 1 : -1;
+    let target = ref + dir * interval.semi;
+    // garder dans une plage audible raisonnable
+    if(target < 50) target = ref + interval.semi;
+    if(target > 108) target = ref - interval.semi;
+    state.current = { notes: [ref, target], answer: interval.semi };
+    el.prompt.textContent = "Quel intervalle sépare les deux notes ?";
+    buildIntervalChoices();
+    playSequence(state.current.notes.map(midiToFreq));
+  }
+}
+
+function buildNoteChoices(){
+  el.choices.className = "choices";
+  el.choices.innerHTML = "";
+  NOTE_NAMES.forEach((name, pc) => {
+    const b = document.createElement("button");
+    b.className = "choice";
+    b.textContent = name;
+    b.dataset.value = pc;
+    b.addEventListener("click", () => answer(pc, b));
+    el.choices.appendChild(b);
+  });
+}
+
+function buildIntervalChoices(){
+  el.choices.className = "choices intervals";
+  el.choices.innerHTML = "";
+  INTERVALS.forEach(iv => {
+    const b = document.createElement("button");
+    b.className = "choice";
+    b.textContent = iv.name;
+    b.dataset.value = iv.semi;
+    b.addEventListener("click", () => answer(iv.semi, b));
+    el.choices.appendChild(b);
+  });
+}
+
+function answer(value, btn){
+  if(state.answered) return;
+  state.answered = true;
+  const correct = value === state.current.answer;
+  state.total++;
+  if(correct){ state.score++; state.streak++; }
+  else { state.streak = 0; }
+
+  [...el.choices.children].forEach(b => {
+    b.disabled = true;
+    const v = Number(b.dataset.value);
+    if(v === state.current.answer) b.classList.add(correct && v === value ? "correct" : "reveal");
+  });
+  if(!correct) btn.classList.add("wrong");
+
+  if(correct){
+    el.feedback.textContent = "✓ Bravo !";
+    el.feedback.className = "feedback good";
+  } else {
+    const label = state.mode === "absolute"
+      ? noteName(state.current.notes[0])
+      : INTERVALS.find(i => i.semi === state.current.answer).name;
+    el.feedback.textContent = "✗ C'était : " + label;
+    el.feedback.className = "feedback bad";
+  }
+  updateStats();
+  el.nextBtn.classList.remove("hidden");
+}
+
+function updateStats(){
+  el.statScore.textContent = state.score;
+  el.statTotal.textContent = state.total;
+  el.statStreak.textContent = state.streak;
+}
+
+// ---------- Évènements ----------
+el.playBtn.addEventListener("click", () => {
+  if(!state.current || state.answered) newRound();
+  else playSequence(state.current.notes.map(midiToFreq));
+});
+el.replayBtn.addEventListener("click", () => {
+  if(state.current) playSequence(state.current.notes.map(midiToFreq));
+});
+el.nextBtn.addEventListener("click", newRound);
+
+el.modeSeg.addEventListener("click", e => {
+  const btn = e.target.closest("button"); if(!btn) return;
+  [...el.modeSeg.children].forEach(b => b.classList.remove("active"));
+  btn.classList.add("active");
+  state.mode = btn.dataset.mode;
+  resetForNewSettings();
+});
+el.rangeSeg.addEventListener("click", e => {
+  const btn = e.target.closest("button"); if(!btn) return;
+  [...el.rangeSeg.children].forEach(b => b.classList.remove("active"));
+  btn.classList.add("active");
+  state.range = btn.dataset.range;
+  resetForNewSettings();
+});
+
+function resetForNewSettings(){
+  state.current = null;
+  state.answered = false;
+  el.choices.innerHTML = "";
+  el.feedback.textContent = "";
+  el.feedback.className = "feedback";
+  el.nextBtn.classList.add("hidden");
+  el.replayBtn.classList.add("hidden");
+  el.prompt.textContent = "Clique sur ▶ pour entendre " + (state.mode === "absolute" ? "une note" : "l'intervalle");
+}
+
+updateStats();
+</script>
+</body>
+</html>
