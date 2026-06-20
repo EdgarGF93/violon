@@ -25,6 +25,10 @@ Tout est dans un seul fichier `index.html` et fonctionne **hors-ligne**.
 - **Nommer** — une note est jouée, tu cliques son nom (Do, Ré, Mi…).
 - **Intervalle** — une note de référence puis une cible sont jouées, tu
   identifies l'intervalle (3ce Maj, 5te juste…).
+- **Gammes** *(écoute, pas un jeu)* — choisis une tonique (Do, Ré… Sol) et
+  majeur/mineur : les notes de la gamme s'affichent sur le manche (tonique
+  cerclée de blanc) et se jouent une à une (montante puis descendante) avec
+  ▶, chaque note s'animant au passage.
 
 ## Étendue des notes
 

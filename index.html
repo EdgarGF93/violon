@@ -207,6 +207,31 @@
   }
   .fb-help input { accent-color: var(--amber); }
 
+  /* ---- Mode Gammes ---- */
+  #scaleControls { margin-bottom: 2px; }
+  .tonic-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 6px; margin-top: 12px; }
+  .tonic {
+    border: 1px solid rgba(255,255,255,.08); background: var(--glass-2); color: var(--ink);
+    padding: 10px 2px; border-radius: 9px; font-size: .85rem; font-weight: 600; font-family: var(--sans);
+    cursor: pointer; transition: background .12s, border-color .12s, transform .08s;
+  }
+  .tonic:hover { border-color: var(--amber-deep); background: rgba(72,57,36,.7); }
+  .tonic:active { transform: scale(.95); }
+  .tonic.active {
+    background: linear-gradient(160deg, var(--amber), var(--amber-deep));
+    color: #241a0c; border-color: var(--amber);
+  }
+  .fb-dot.scale-dim { opacity: .14; }
+  .fb-dot.scale-note {
+    background: rgba(232,176,77,.9); border-color: var(--amber); color: #241a0c; opacity: 1;
+  }
+  .fb-dot.scale-root { box-shadow: 0 0 0 2px #fff, 0 0 10px rgba(232,176,77,.6); }
+  .fb-dot.scale-note.playing {
+    background: var(--green); border-color: var(--green); color: #0f2410;
+    transform: translate(-50%,-50%) scale(1.3);
+    box-shadow: 0 0 16px rgba(123,207,131,.85); z-index: 2;
+  }
+
   .feedback { min-height: 2.4em; margin-top: 18px; font-size: 1.05rem; font-weight: 600; font-family: var(--serif); }
   .feedback.good { color: var(--green); }
   .feedback.bad { color: var(--red); }
@@ -235,12 +260,13 @@
       <div class="setting-row">
         <span class="label">Mode</span>
         <div class="seg" id="modeSeg">
-          <button data-mode="fingerboard" class="active">Sur le manche</button>
+          <button data-mode="fingerboard" class="active">Manche</button>
           <button data-mode="absolute">Nommer</button>
           <button data-mode="interval">Intervalle</button>
+          <button data-mode="scales">Gammes</button>
         </div>
       </div>
-      <div class="setting-row">
+      <div class="setting-row" id="rangeSetting">
         <span class="label">Étendue des notes</span>
         <div class="seg" id="rangeSeg">
           <button data-range="open">Cordes à vide</button>
@@ -262,6 +288,14 @@
     <button class="replay hidden" id="replayBtn">↻ Réécouter</button>
 
     <div class="prompt" id="prompt">Clique sur ▶ pour entendre une note</div>
+
+    <div id="scaleControls" class="hidden">
+      <div class="seg" id="scaleTypeSeg">
+        <button data-stype="major" class="active">Majeur</button>
+        <button data-stype="minor">Mineur</button>
+      </div>
+      <div class="tonic-grid" id="tonicGrid"></div>
+    </div>
 
     <div id="fingerboardWrap" class="hidden">
       <div class="fingerboard" id="fingerboard"></div>
@@ -365,9 +399,9 @@ function playNote(freq, duration = 1.4){
   });
 }
 
-async function playSequence(freqs, gap = 0.9){
+async function playSequence(freqs, gap = 0.9, noteDur = 1.4){
   await audio().resume();
-  freqs.forEach((f, i) => setTimeout(() => playNote(f), i * gap * 1000));
+  freqs.forEach((f, i) => setTimeout(() => playNote(f, noteDur), i * gap * 1000));
 }
 
 // ---------- État du jeu ----------
@@ -378,6 +412,9 @@ const state = {
   score: 0, total: 0, streak: 0,
   answered: false,
   showNames: false,
+  scaleTonic: 7,      // 7 = Sol
+  scaleType: "major",
+  scaleNotes: [],
 };
 
 const el = {
@@ -390,6 +427,12 @@ const el = {
   fingerboardWrap: document.getElementById("fingerboardWrap"),
   fingerboard: document.getElementById("fingerboard"),
   showNames: document.getElementById("showNames"),
+  fbHelp: document.querySelector(".fb-help"),
+  scaleControls: document.getElementById("scaleControls"),
+  scaleTypeSeg: document.getElementById("scaleTypeSeg"),
+  tonicGrid: document.getElementById("tonicGrid"),
+  scoreline: document.querySelector(".scoreline"),
+  rangeSetting: document.getElementById("rangeSetting"),
   feedback: document.getElementById("feedback"),
   nextBtn: document.getElementById("nextBtn"),
   statScore: document.getElementById("statScore"),
@@ -408,13 +451,24 @@ const FRETS = 7; // de la corde à vide jusqu'à la quinte (atteint la corde voi
 const OPEN_MIDIS = STRINGS.map(s => s.open);
 const FB_MIDIS = range(55, 83); // toutes les notes jouables en 1re position
 
+// Gammes (demi-tons depuis la tonique, sur une octave)
+const MAJOR = [0, 2, 4, 5, 7, 9, 11, 12];
+const MINOR = [0, 2, 3, 5, 7, 8, 10, 12]; // mineur naturel
+// Tonique la plus grave jouable en 1re position pour une classe de hauteur donnée
+function scaleTonicMidi(pc){ for(let m = 55; m <= 66; m++) if(pitchClass(m) === pc) return m; return 55; }
+
 function pick(arr){ return arr[Math.floor(Math.random() * arr.length)]; }
 
 // ---------- Manche du violon ----------
 function showAnswerArea(which){
-  const fb = which === "fingerboard";
-  el.fingerboardWrap.classList.toggle("hidden", !fb);
-  el.choices.classList.toggle("hidden", fb);
+  const scales = which === "scales";
+  el.choices.classList.toggle("hidden", which !== "cards");
+  el.fingerboardWrap.classList.toggle("hidden", which !== "fingerboard" && !scales);
+  el.scaleControls.classList.toggle("hidden", !scales);
+  // En mode Gammes : pas de score, pas d'étendue, pas de case "afficher les noms"
+  el.scoreline.classList.toggle("hidden", scales);
+  el.rangeSetting.classList.toggle("hidden", scales);
+  el.fbHelp.classList.toggle("hidden", scales);
 }
 
 function renderFingerboard(){
@@ -474,6 +528,69 @@ function answerFingerboard(midi, dot){
   el.feedback.className = "feedback " + (correct ? "good" : "bad");
   updateStats();
   el.nextBtn.classList.remove("hidden");
+}
+
+// ---------- Mode Gammes ----------
+function buildTonicGrid(){
+  el.tonicGrid.innerHTML = "";
+  NOTE_NAMES.forEach((name, pc) => {
+    const b = document.createElement("button");
+    b.className = "tonic" + (pc === state.scaleTonic ? " active" : "");
+    b.textContent = name;
+    b.dataset.pc = pc;
+    b.addEventListener("click", () => {
+      state.scaleTonic = pc;
+      el.tonicGrid.querySelectorAll(".tonic").forEach(t =>
+        t.classList.toggle("active", Number(t.dataset.pc) === pc));
+      showScale();
+      playScale();
+    });
+    el.tonicGrid.appendChild(b);
+  });
+}
+
+function showScale(){
+  const tonicMidi = scaleTonicMidi(state.scaleTonic);
+  const pattern = state.scaleType === "major" ? MAJOR : MINOR;
+  const notes = pattern.map(iv => tonicMidi + iv);
+  state.scaleNotes = notes;
+
+  renderFingerboard();           // construit le manche (pastilles)
+  const set = new Set(notes);
+  el.fingerboard.querySelectorAll(".fb-dot").forEach(d => {
+    const m = Number(d.dataset.midi);
+    d.disabled = true;
+    if(set.has(m)){
+      d.classList.add("scale-note", "show-name");
+      if(pitchClass(m) === state.scaleTonic) d.classList.add("scale-root");
+    } else {
+      d.classList.add("scale-dim");
+    }
+  });
+
+  const typeLabel = state.scaleType === "major" ? "majeur" : "mineur";
+  el.prompt.textContent = "Gamme de " + NOTE_NAMES[state.scaleTonic] + " " + typeLabel + " — clique ▶ pour l'écouter";
+}
+
+function flashScaleDot(midi){
+  el.fingerboard.querySelectorAll(".fb-dot.scale-note").forEach(d => {
+    if(Number(d.dataset.midi) === midi){
+      d.classList.add("playing");
+      setTimeout(() => d.classList.remove("playing"), 340);
+    }
+  });
+}
+
+function playScale(){
+  if(!state.scaleNotes.length) showScale();
+  const notes = state.scaleNotes;
+  const seq = notes.concat(notes.slice(0, -1).reverse()); // montante puis descendante
+  const gap = 0.6;       // intervalle entre deux attaques
+  const noteDur = 0.55;  // < gap : chaque note s'éteint avant la suivante (pas de chevauchement)
+  playSequence(seq.map(midiToFreq), gap, noteDur);
+  el.playBtn.classList.add("playing");
+  seq.forEach((m, i) => setTimeout(() => flashScaleDot(m), i * gap * 1000));
+  setTimeout(() => el.playBtn.classList.remove("playing"), seq.length * gap * 1000);
 }
 
 function newRound(){
@@ -577,6 +694,7 @@ function updateStats(){
 
 // ---------- Évènements ----------
 el.playBtn.addEventListener("click", () => {
+  if(state.mode === "scales"){ playScale(); return; }
   if(!state.current || state.answered) newRound();
   else playSequence(state.current.notes.map(midiToFreq));
 });
@@ -607,7 +725,11 @@ function resetForNewSettings(){
   el.feedback.className = "feedback";
   el.nextBtn.classList.add("hidden");
   el.replayBtn.classList.add("hidden");
-  if(state.mode === "fingerboard"){
+  if(state.mode === "scales"){
+    showAnswerArea("scales");
+    buildTonicGrid();
+    showScale();
+  } else if(state.mode === "fingerboard"){
     showAnswerArea("fingerboard");
     renderFingerboard();
     el.prompt.textContent = "Clique sur ▶ pour entendre une note à situer sur le manche";
@@ -617,6 +739,15 @@ function resetForNewSettings(){
     el.prompt.textContent = "Clique sur ▶ pour entendre " + (state.mode === "absolute" ? "une note" : "l'intervalle");
   }
 }
+
+el.scaleTypeSeg.addEventListener("click", e => {
+  const btn = e.target.closest("button"); if(!btn) return;
+  [...el.scaleTypeSeg.children].forEach(b => b.classList.remove("active"));
+  btn.classList.add("active");
+  state.scaleType = btn.dataset.stype;
+  showScale();
+  playScale();
+});
 
 el.showNames.addEventListener("change", () => {
   state.showNames = el.showNames.checked;
