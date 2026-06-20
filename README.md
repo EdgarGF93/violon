@@ -50,3 +50,8 @@ Tout est dans un seul fichier `index.html` et fonctionne **hors-ligne**.
 Le son est **synthétisé** en direct avec la Web Audio API (oscillateurs
 sawtooth désaccordés + filtre passe-bas + formant + vibrato + enveloppe
 d'archet) — pas de fichiers audio à télécharger.
+
+## Avertissement
+
+La totalité du code de ce projet a été générée par **Claude Opus**, sous la
+direction d'**Edgar Gutierrez Fernandez**.
