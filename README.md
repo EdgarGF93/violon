@@ -3,6 +3,15 @@
 Petite application web pour entraîner son oreille au violon : une note (ou un
 intervalle) est jouée, et tu dois la reconnaître.
 
+## Aperçu
+
+Exemple : le mode **Gammes** affichant la gamme de *Sol majeur* sur le manche
+(tonique cerclée de blanc), prête à être écoutée.
+
+<p align="center">
+  <img src="docs/manche.png" alt="Manche du violon — gamme de Sol majeur" width="360">
+</p>
+
 ## Lancer
 
 Aucune installation, aucune dépendance. Ouvre simplement le fichier dans un
