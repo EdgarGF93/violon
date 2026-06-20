@@ -17,10 +17,14 @@ Tout est dans un seul fichier `index.html` et fonctionne **hors-ligne**.
 
 ## Modes
 
-- **Nommer la note** — une note est jouée, tu cliques son nom (Do, Ré, Mi…).
-  Entraîne l'oreille absolue / le repérage sur le manche.
-- **Reconnaître l'intervalle** — une note de référence puis une cible sont
-  jouées, tu identifies l'intervalle (3ce Maj, 5te juste…).
+- **Sur le manche** *(par défaut)* — une note est jouée, tu cliques sa position
+  sur le manche du violon (corde à vide ou position de doigt). Une même note
+  peut se jouer à plusieurs endroits (ex. *La* = corde La à vide **ou** position
+  haute sur la corde Ré) : toutes les positions correctes sont acceptées.
+  Case **« Afficher les noms »** pour s'aider au début.
+- **Nommer** — une note est jouée, tu cliques son nom (Do, Ré, Mi…).
+- **Intervalle** — une note de référence puis une cible sont jouées, tu
+  identifies l'intervalle (3ce Maj, 5te juste…).
 
 ## Étendue des notes
 
